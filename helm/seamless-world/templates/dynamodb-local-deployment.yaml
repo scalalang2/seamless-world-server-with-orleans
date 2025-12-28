@@ -20,6 +20,9 @@ spec:
           imagePullPolicy: {{ .Values.dynamodbLocal.image.pullPolicy }}
           ports:
             - containerPort: 8000
-          args: {{ .Values.dynamodbLocal.args }}
+          command:
+            - sh
+            - -c
+            - java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
           resources:
             {{ toYaml .Values.dynamodbLocal.resources | nindent 12 }}

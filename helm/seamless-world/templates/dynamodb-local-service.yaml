@@ -12,3 +12,18 @@ spec:
   selector:
     app: dynamodb-local
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynamodb-local-lb
+  labels:
+    app: dynamodb-local-lb
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: dynamodb-local
+  type: LoadBalancer
