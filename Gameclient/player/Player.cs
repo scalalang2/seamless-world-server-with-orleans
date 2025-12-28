@@ -62,6 +62,7 @@ public partial class Player : CharacterBody3D
 		this.cameraInputDirection = Vector2.Zero;
 
 		var rawInput = Input.GetVector("move_right", "move_left", "move_down", "move_up");
+		Console.WriteLine(rawInput);
 		var forward = this._cameraNode.GlobalBasis.Z;
 		var right = _cameraNode.GlobalBasis.X;
 		
@@ -70,6 +71,7 @@ public partial class Player : CharacterBody3D
 
 		var yVelocity = Velocity.Y;
 		Velocity = Velocity.MoveToward(moveDirection * this.MoveSpeed, (float)delta * this.Acceleration);
+		
 		if (!IsOnFloor())
 		{
 			yVelocity -= (float)delta * gravity;

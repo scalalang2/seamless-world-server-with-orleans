@@ -17,6 +17,7 @@ script = ExtResource("1_onrkg")
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00075030327, -0.0035443306, -2.1576881e-05)
 script = ExtResource("3_i3pqv")
+Blink = true
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9262005, 0)
