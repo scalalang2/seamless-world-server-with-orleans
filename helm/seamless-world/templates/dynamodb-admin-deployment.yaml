@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynamodb-admin
+  labels:
+    app: dynamodb-admin
+spec:
+  replicas: {{ .Values.dynamodbAdmin.replicaCount }}
+  selector:
+    matchLabels:
+      app: dynamodb-admin
+  template:
+    metadata:
+      labels:
+        app: dynamodb-admin
+    spec:
+      containers:
+        - name: dynamodb-admin
+          image: "{{ .Values.dynamodbAdmin.image.repository }}:{{ .Values.dynamodbAdmin.image.tag }}"
+          imagePullPolicy: {{ .Values.dynamodbAdmin.image.pullPolicy }}
+          ports:
+            - containerPort: 8001
+          env:
+            - name: DYNAMO_ENDPOINT
+              value: "{{ .Values.dynamodbAdmin.dynamoEndpoint }}"
+          resources:
+            {{ toYaml .Values.dynamodbAdmin.resources | nindent 12 }}

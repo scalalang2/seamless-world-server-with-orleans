@@ -1,0 +1,6 @@
+# ref. https://github.com/nats-io/k8s/blob/main/helm/charts/nats/values.yaml
+nats:
+  enabled: true
+  config:
+    cluster:
+      enabled: true

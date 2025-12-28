@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynamodb-local
+  labels:
+    app: dynamodb-local
+spec:
+  replicas: {{ .Values.dynamodbLocal.replicaCount }}
+  selector:
+    matchLabels:
+      app: dynamodb-local
+  template:
+    metadata:
+      labels:
+        app: dynamodb-local
+    spec:
+      containers:
+        - name: dynamodb-local
+          image: "{{ .Values.dynamodbLocal.image.repository }}:{{ .Values.dynamodbLocal.image.tag }}"
+          imagePullPolicy: {{ .Values.dynamodbLocal.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+          args: {{ .Values.dynamodbLocal.args }}
+          resources:
+            {{ toYaml .Values.dynamodbLocal.resources | nindent 12 }}

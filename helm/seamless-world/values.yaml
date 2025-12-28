@@ -1,0 +1,19 @@
+dynamodbLocal:
+  replicaCount: 1
+  image:
+    repository: amazon/dynamodb-local
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  resources: {}
+
+dynamodbAdmin:
+  replicaCount: 1
+  image:
+    repository: aaronshaf/dynamodb-admin
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  dynamoEndpoint: "http://dynamodb-local:8000"
+
+  resources: {} 

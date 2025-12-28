@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynamodb-local
+  labels:
+    app: dynamodb-local
+spec:
+  ports:
+    - port: 8000
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: dynamodb-local
+  type: ClusterIP
