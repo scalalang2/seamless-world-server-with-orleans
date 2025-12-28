@@ -2,20 +2,21 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://brbtohct73mlt"
-path="res://.godot/imported/checkboard.png-130d133a6029e1ca9a92686e2c703873.ctex"
+uid="uid://d23cgxm8h401a"
+path.s3tc="res://.godot/imported/checkboard.png-130d133a6029e1ca9a92686e2c703873.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 
 [deps]
 
 source_file="res://level/checkboard.png"
-dest_files=["res://.godot/imported/checkboard.png-130d133a6029e1ca9a92686e2c703873.ctex"]
+dest_files=["res://.godot/imported/checkboard.png-130d133a6029e1ca9a92686e2c703873.s3tc.ctex"]
 
 [params]
 
-compress/mode=3
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
