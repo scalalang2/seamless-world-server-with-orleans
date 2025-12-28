@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameLogicServer", "GameLogi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameGatewayServer", "GameGatewayServer\GameGatewayServer.csproj", "{3EC31763-6F5B-4A57-8598-ED38F1C946A7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameProtocol", "..\SharedLibs\GameProtocol\GameProtocol.csproj", "{0AAB7247-B606-4B55-94FE-18BBAE605AF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{3EC31763-6F5B-4A57-8598-ED38F1C946A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3EC31763-6F5B-4A57-8598-ED38F1C946A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3EC31763-6F5B-4A57-8598-ED38F1C946A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0AAB7247-B606-4B55-94FE-18BBAE605AF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0AAB7247-B606-4B55-94FE-18BBAE605AF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0AAB7247-B606-4B55-94FE-18BBAE605AF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0AAB7247-B606-4B55-94FE-18BBAE605AF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

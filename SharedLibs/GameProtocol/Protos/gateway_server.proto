@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option csharp_namespace = "GameProtocol";
+
+package greet;
+
+service GatewayServer {
+  // 나의 정보를 주기적으로 방송하는 RPC
+  rpc Publish (stream PublishRequest) returns (PublishResponse);
+  
+  // 내 위치 주위의 정보를 수신받는 RPC
+  rpc Subscribe (SubscribeRequest) returns (stream SubscribeResponse);
+}
+
+message SubscribeRequest {
+  string playerId = 1;
+}
+
+message SubscribeResponse {
+  repeated PlayerPosition playerPositionList = 1;
+}
+
+message PublishRequest {
+  PlayerPosition playerPosition = 1;
+}
+
+message PublishResponse {
+  string message = 1;
+}
+
+message PlayerPosition {
+  string playerId = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+  double pitch = 5;
+  double yaw = 6;
+  double roll = 7;
+}

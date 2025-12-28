@@ -11,6 +11,7 @@ await Host.CreateDefaultBuilder(args)
         var orleansConfig = context.Configuration.GetSection("Application");
         siloBuilder.Configure<ClusterOptions>(orleansConfig);
         
+        // Clustering
         var clusteringConfig = orleansConfig.GetSection("Clustering");
         var clusteringProvider = clusteringConfig.GetValue<string>("Provider"); 
         switch (clusteringProvider)
