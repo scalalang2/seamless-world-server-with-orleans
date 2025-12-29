@@ -57,17 +57,16 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
                 // 새 구역으로 진입
                 var newWorldGrain = _clusterClient.GetGrain<IWorldGrain>(newFieldId);
                 await newWorldGrain.Enter(position);
+                currentFieldId = newFieldId;
                 
                 _logger.LogInformation($"Player {playerId} moved from {currentFieldId} to {newFieldId}");
             }
-            else
+            
+            // 같은 구역 내에서 위치만 업데이트
+            if (!string.IsNullOrEmpty(currentFieldId))
             {
-                // 같은 구역 내에서 위치만 업데이트
-                if (!string.IsNullOrEmpty(currentFieldId))
-                {
-                    var worldGrain = _clusterClient.GetGrain<IWorldGrain>(currentFieldId);
-                    _ = worldGrain.UpdatePlayerPosition(position);
-                }
+                var worldGrain = _clusterClient.GetGrain<IWorldGrain>(currentFieldId);
+                _ = worldGrain.UpdatePlayerPosition(position);
             }
         }
         
@@ -86,7 +85,7 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
     public override async Task Subscribe(SubscribeRequest request, IServerStreamWriter<SubscribeResponse> responseStream, ServerCallContext context)
     {
         var playerId = request.PlayerId;
-        const int aoiLevel = 1;
+        const int aoiLevel = 3;
         _logger.LogInformation($"Player {playerId} trying to subscribe with AOI Level {aoiLevel}.");
         
         var playerGrain =  _clusterClient.GetGrain<IPlayerGrain>(playerId);
