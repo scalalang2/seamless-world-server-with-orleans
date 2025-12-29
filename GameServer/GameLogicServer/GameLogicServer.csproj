@@ -16,6 +16,8 @@
       <PackageReference Include="Microsoft.Orleans.Persistence.DynamoDB" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Persistence.Memory" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Sdk" Version="9.2.1" />
+      <PackageReference Include="Microsoft.Orleans.Serialization" Version="9.2.1" />
+      <PackageReference Include="Microsoft.Orleans.Serialization.Protobuf" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Server" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Transactions" Version="9.2.1" />
       <PackageReference Include="NATS.Client" Version="1.1.8" />

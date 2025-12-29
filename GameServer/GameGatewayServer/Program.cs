@@ -1,17 +1,27 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Net;
 using GameGatewayServer.Services;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NATS.Client;
 using Orleans.Hosting;
+using Orleans.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Listen(IPAddress.Any, 5001, listenOptions => { listenOptions.Protocols = HttpProtocols.Http2; });
+});
+
 builder.Host.UseOrleansClient(clientBuilder =>
 {
-    clientBuilder.UseLocalhostClustering();
+    clientBuilder.UseLocalhostClustering()
+        .Services.AddSerializer(builder => builder.AddProtobufSerializer());
 });
 
 builder.Services.AddSingleton<IConnection>(sp =>

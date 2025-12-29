@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NATS.Client;
 using Orleans.Configuration;
 using Orleans.Providers;
+using Orleans.Serialization;
 
 await Host.CreateDefaultBuilder(args)
     .UseOrleans((context, siloBuilder) =>
@@ -48,6 +49,9 @@ await Host.CreateDefaultBuilder(args)
             default:
                 throw new Exception("Unknown persistence provider");
         }
+      
+        // add protobuf serializer
+        siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddProtobufSerializer());
     })
     .ConfigureServices(services =>
     {

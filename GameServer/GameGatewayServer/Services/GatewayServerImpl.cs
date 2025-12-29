@@ -29,7 +29,7 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
     public override Task<LogoutResponse> Logout(LogoutRequest request, ServerCallContext context)
     {
         this._logger.LogInformation($"Player {request.PlayerId} is logged out");
-        return base.Logout(request, context);
+        return Task.FromResult(new LogoutResponse());
     }
 
     public override async Task<PublishResponse> Publish(IAsyncStreamReader<PublishRequest> requestStream, ServerCallContext context)

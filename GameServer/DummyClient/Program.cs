@@ -1,9 +1,10 @@
 ﻿using System.Numerics;
 using System.Threading.Tasks.Sources;
 using GameProtocol;
+using Grpc.Core;
 using Grpc.Net.Client;
 
-var numClients = args.Length > 0 ? int.Parse(args[0]) : 100;
+var numClients = args.Length > 0 ? int.Parse(args[0]) : 1;
 Console.WriteLine($"{numClients}개의 더미 클라이언트를 생성하는 중");
 
 var tasks = new List<Task>();
@@ -46,7 +47,10 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     var direction = new Vector3((float)((random.NextDouble() - 0.5) * 2), 0, (float)((random.NextDouble() - 0.5) * 2));
     var normalized = direction = Vector3.Normalize(direction);
 
-    using var channel = GrpcChannel.ForAddress("http://localhost:5000");
+    using var channel = GrpcChannel.ForAddress("http://127.0.0.1:5001", new GrpcChannelOptions
+    {
+        Credentials = ChannelCredentials.Insecure
+    });
     var client = new GatewayServer.GatewayServerClient(channel);
 
     Console.WriteLine($"Player {playerId} 로그인 수행");
