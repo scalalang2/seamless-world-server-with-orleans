@@ -13,11 +13,17 @@ $ minikube start
 $ minikube dashboard
 ```
 
-### 2. Deploy helm chart
+### 2. Install apps with helm chart
 ```sh
-$ helm upgrade app ./helm/seamless-world \
+$ helm install app ./helm/seamless-world \
     -f ./helm/seamless-world/values.yaml \
     -f ./helm/seamless-world/nats-values.yaml
+```
+
+If you have modified the chart manually, you can update it to reflect the changes.
+
+```sh
+helm upgrade app ./helm/seamless-world -f ./helm/seamless-world/values.yaml -f ./helm/seamless-world/nats-values.yaml
 ```
 
 ### 3. Expose services
