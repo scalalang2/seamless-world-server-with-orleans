@@ -49,17 +49,44 @@ await Host.CreateDefaultBuilder(args)
             default:
                 throw new Exception("Unknown persistence provider");
         }
+        
+        // Directory
+        var grainDirectoryConfig = orleansConfig.GetSection("GrainDirectory");
+        var grainDirectoryProvider = grainDirectoryConfig.GetValue<string>("Provider");
+        switch (grainDirectoryProvider)
+        {
+            case "Redis":
+                var redisConfig = grainDirectoryConfig.GetSection("Redis");
+                var redisEndpoint = redisConfig.GetValue<string>("ConnectionString");
+                if (string.IsNullOrEmpty(redisEndpoint))
+                {
+                    throw new Exception("Redis:ConnectionString is not configured.");
+                }
+                
+                siloBuilder.UseRedisGrainDirectoryAsDefault(options =>
+                {
+                    options.ConfigurationOptions = new StackExchange.Redis.ConfigurationOptions()
+                    {
+                        EndPoints = { redisEndpoint }
+                    };
+                });
+                break;
+            default:
+                throw new Exception($"Unknown grain directory provider: {grainDirectoryProvider}");
+        }
+        
       
         // add protobuf serializer
         siloBuilder.Services.AddSerializer(serializerBuilder => serializerBuilder.AddProtobufSerializer());
     })
     .ConfigureServices(services =>
     {
-        // NATS Connection을 싱글톤으로 등록
+        // NATS 커넥션 세팅
         services.AddSingleton<IConnection>(sp =>
         {
             var factory = new ConnectionFactory();
-            // NATS 서버 주소. 설정 파일에서 가져오는 것을 권장.
+            
+            // TODO: Configuration으로 이동
             var connection = factory.CreateConnection("nats://localhost:4222"); 
             return connection;
         });
