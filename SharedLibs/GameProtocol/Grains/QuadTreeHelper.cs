@@ -5,21 +5,17 @@ namespace GameProtocol.Grains;
 
 public static class QuadTreeHelper
 {
-    private const double MinX = -213.0;
-    private const double MaxX = 336.0;
-    private const double MinZ = -235.0;
-    private const double MaxZ = 177.0;
-    private const int MaxLevel = 4; // PlayerGrain의 레벨과 일치해야 함
-
     /// <summary>
     /// 주어진 위치에 해당하는 QuadTree 노드의 ID를 계산합니다.
     /// </summary>
     public static string GetNodeIdForPosition(PlayerPosition position)
     {
         var sb = new StringBuilder("0");
-        var (minX, maxX, minZ, maxZ) = (MinX, MaxX, MinZ, MaxZ);
+        var (minX, maxX, minZ, maxZ) = (
+            Constants.Constants.MinAreaX, Constants.Constants.MaxAreaX, 
+            Constants.Constants.MinAreaZ, Constants.Constants.MaxAreaZ);
 
-        for (var level = 1; level <= MaxLevel; level++)
+        for (var level = 1; level <= Constants.Constants.MaxQuaudLevel; level++)
         {
             var midX = minX + (maxX - minX) / 2.0;
             var midZ = minZ + (maxZ - minZ) / 2.0;
@@ -84,7 +80,10 @@ public static class QuadTreeHelper
     /// </summary>
     private static (double minX, double maxX, double minZ, double maxZ, double midX, double midZ) GetNodeBounds(string nodeId)
     {
-        var (minX, maxX, minZ, maxZ) = (MinX, MaxX, MinZ, MaxZ);
+        var (minX, maxX, minZ, maxZ) = (
+            Constants.Constants.MinAreaX, Constants.Constants.MaxAreaX, 
+            Constants.Constants.MinAreaZ, Constants.Constants.MaxAreaZ);
+
 
         var path = nodeId.Split('-').Skip(1).Select(int.Parse);
 
