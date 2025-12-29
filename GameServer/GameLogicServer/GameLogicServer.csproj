@@ -15,10 +15,14 @@
       <PackageReference Include="Microsoft.Orleans.Hosting.Kubernetes" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Persistence.DynamoDB" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Persistence.Memory" Version="9.2.1" />
-      <PackageReference Include="Microsoft.Orleans.Runtime" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Sdk" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Server" Version="9.2.1" />
       <PackageReference Include="Microsoft.Orleans.Transactions" Version="9.2.1" />
+      <PackageReference Include="NATS.Client" Version="1.1.8" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\SharedLibs\GameProtocol\GameProtocol.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -7,7 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="Server" />
+        <Protobuf Include="Protos/**/*.proto" ProtoRoot="Protos" GrpcServices="Both" />
     </ItemGroup>
 
     <ItemGroup>
@@ -17,6 +17,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         <PrivateAssets>all</PrivateAssets>
       </PackageReference>
+      <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
     </ItemGroup>
 
 </Project>

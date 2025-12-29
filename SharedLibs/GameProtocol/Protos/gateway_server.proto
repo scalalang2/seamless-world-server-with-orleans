@@ -2,8 +2,6 @@ syntax = "proto3";
 
 option csharp_namespace = "GameProtocol";
 
-package greet;
-
 // 게이트웨이 서버
 //
 // 여기서 로그인/로그아웃은 클라이언트의 실행 종료 시 스폰된 객체를 지우는 용도입니다.

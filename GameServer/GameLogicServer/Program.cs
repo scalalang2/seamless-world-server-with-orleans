@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NATS.Client;
 using Orleans.Configuration;
 using Orleans.Providers;
 
@@ -50,6 +51,14 @@ await Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices(services =>
     {
+        // NATS Connection을 싱글톤으로 등록
+        services.AddSingleton<IConnection>(sp =>
+        {
+            var factory = new ConnectionFactory();
+            // NATS 서버 주소. 설정 파일에서 가져오는 것을 권장.
+            var connection = factory.CreateConnection("nats://localhost:4222"); 
+            return connection;
+        });
     })
     .ConfigureLogging(logging =>
     {
