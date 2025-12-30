@@ -45,7 +45,10 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     };
     
     var direction = new Vector3((float)((random.NextDouble() - 0.5) * 2), 0, (float)((random.NextDouble() - 0.5) * 2));
-    var normalized = direction = Vector3.Normalize(direction);
+    var normalized = Vector3.Normalize(direction);
+    
+    // 이동방향에 따른 회전 각도
+    currentPosition.Yaw = (float)Math.Atan2(normalized.X, normalized.Z);
 
     using var channel = GrpcChannel.ForAddress("http://127.0.0.1:5001", new GrpcChannelOptions
     {
@@ -58,34 +61,6 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
 
     // 위치 정보 송수신을 동시에 처리
     using var commsCall = client.Connect();
-
-    // 서버로부터 오는 메시지를 처리하는 읽기 Task
-    var readTask = Task.Run(async () =>
-    {
-        try
-        {
-            await foreach (var response in commsCall.ResponseStream.ReadAllAsync(cancellationToken))
-            {
-                if (response.MessageCase == ServerConnectionResponse.MessageOneofCase.WorldUpdate)
-                {
-                    // Dummy client에서는 수신 정보를 로그로만 남깁니다.
-                    var playerCount = response.WorldUpdate.PlayerPositionList.Count;
-                    if (playerCount > 0)
-                    {
-                        // Console.WriteLine($"Player {playerId} received update with {playerCount} players.");
-                    }
-                }
-            }
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
-        {
-            Console.WriteLine($"Player {playerId} read stream cancelled.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Player {playerId} read error: {ex.Message}");
-        }
-    });
 
     // 위치 정보를 주기적으로 전송하는 쓰기 로직
     try
@@ -100,15 +75,23 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
             currentPosition.Z += normalized.Z * speed * 0.1;
 
             // 경계에 닿으면 반대쪽으로 뛰어가기
+            var directionChanged = false;
             if (currentPosition.X < MinX || currentPosition.X > MaxX)
             {
                 normalized.X *= -1;
                 currentPosition.X = Math.Clamp(currentPosition.X, MinX, MaxX);
+                directionChanged = true;
             }
             if (currentPosition.Z < MinZ || currentPosition.Z > MaxZ)
             {
                 normalized.Z *= -1;
                 currentPosition.Z = Math.Clamp(currentPosition.Z, MinZ, MaxZ);
+                directionChanged = true;
+            }
+            
+            if (directionChanged)
+            {
+                currentPosition.Yaw = (float)Math.Atan2(normalized.X, normalized.Z);
             }
 
             await commsCall.RequestStream.WriteAsync(new ClientConnectionRequest { PositionUpdate = currentPosition });
@@ -127,9 +110,6 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     {
         await commsCall.RequestStream.CompleteAsync();
         Console.WriteLine($"Player {playerId} write stream finished.");
-        
-        // 읽기 Task가 끝날 때까지 잠시 대기
-        await readTask;
         
         try
         {

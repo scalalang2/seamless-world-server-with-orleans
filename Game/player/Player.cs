@@ -13,12 +13,6 @@ public partial class Player : CharacterBody3D
 	// Flag to distinguish between the local player and remote representations.
 	public bool IsRemote = false;
 	private Transform3D _remoteTargetTransform;
-	
-	// This method will be called by the main Player script to provide updates for remote players.
-	public void SetRemoteTargetTransform(Transform3D newTransform)
-	{
-		_remoteTargetTransform = newTransform;
-	}
 
 	[Export] public float MouseSensitivity = 1.5f;
 	[ExportGroup("Movement")]
@@ -119,15 +113,17 @@ public partial class Player : CharacterBody3D
 
 			receivedPlayerIds.Add(playerPos.PlayerId);
 
+			var isNewPlayer = false;
 			if (!_otherPlayers.TryGetValue(playerPos.PlayerId, out var playerNode))
 			{
+				isNewPlayer = true;
+				
 	            // 새로운 원격 플레이어 객체를 생성한다.
 	            var newRemotePlayer = _otherPlayerScene.Instantiate<Player>();
 	            newRemotePlayer.Name = playerPos.PlayerId;
 	            newRemotePlayer.IsRemote = true;
 	                
 	            // 부모 노드의 자식으로 노드를 추가함
-	            GetParent().AddChild(newRemotePlayer); 
 	            _otherPlayers[playerPos.PlayerId] = newRemotePlayer;
 	            GD.Print($"[{_playerId}] Found new player: {playerPos.PlayerId}");
 	            playerNode = newRemotePlayer;			
@@ -135,11 +131,15 @@ public partial class Player : CharacterBody3D
 
 			// 위치 정보 업데이트
 			var newTransform = new Transform3D(
-				Basis.FromEuler(new Vector3((float)playerPos.Pitch, (float)playerPos.Yaw, (float)playerPos.Roll)),
+				Basis.FromEuler(new Vector3(0, (float)playerPos.Yaw, 0)),
 				new Vector3((float)playerPos.X, (float)playerPos.Y, (float)playerPos.Z)
 			);
 			
 			(playerNode as Player)?.SetRemoteTargetTransform(newTransform);
+			if (isNewPlayer)
+			{
+				GetParent().AddChild(playerNode); 
+			}
 		}
 		
 		var playersToRemove = new List<string>();
@@ -291,5 +291,10 @@ public partial class Player : CharacterBody3D
 				GD.PrintErr($"[{_playerId}] Failed to publish: {ex.Message}");
 			}
 		}
+	}
+	
+	public void SetRemoteTargetTransform(Transform3D newTransform)
+	{
+		_remoteTargetTransform = newTransform;
 	}
 }
