@@ -13,11 +13,8 @@ service GatewayServer {
   // 로그아웃
   rpc Logout(LogoutRequest) returns (LogoutResponse);
   
-  // 나의 정보를 주기적으로 방송하는 RPC
-  rpc Publish (stream PublishRequest) returns (PublishResponse);
-  
-  // 내 위치 주위의 정보를 수신받는 RPC
-  rpc Subscribe (SubscribeRequest) returns (stream SubscribeResponse);
+  // 위치 정보 송신과 월드 정보 수신을 동시에 처리하는 양방향 스트림
+  rpc Connect (stream ClientConnectionRequest) returns (stream ServerConnectionResponse);
 }
 
 message LoginRequest {
@@ -34,20 +31,20 @@ message LogoutRequest {
 message LogoutResponse {
 }
 
-message SubscribeRequest {
-  string playerId = 1;
+message ClientConnectionRequest {
+  oneof message {
+    PlayerPosition position_update = 1;
+  }
+}
+
+message ServerConnectionResponse {
+  oneof message {
+    SubscribeResponse world_update = 1;
+  }
 }
 
 message SubscribeResponse {
   repeated PlayerPosition playerPositionList = 1;
-}
-
-message PublishRequest {
-  PlayerPosition playerPosition = 1;
-}
-
-message PublishResponse {
-  string message = 1;
 }
 
 message PlayerPosition {

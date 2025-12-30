@@ -47,7 +47,7 @@ public static class QuadTreeHelper
             return new List<string> { nodeId };
         }
         
-        // 현재는 aoiLevel 1만 지원
+        // TODO: aoiLevel이 현재 미적용 되어 있음
         var bounds = GetNodeBounds(nodeId);
         var width = bounds.maxX - bounds.minX;
         var height = bounds.maxZ - bounds.minZ;

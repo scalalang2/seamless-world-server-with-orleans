@@ -31,7 +31,7 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     double MaxZ = GameProtocol.Constants.Constants.MaxAreaZ;
     double speed = 5.0;
 
-    const double yPosition = -4.6164; // 높이
+    const double yPosition = 0.5; // 높이
     var random = new Random();
     var currentPosition = new PlayerPosition
     {
@@ -56,10 +56,43 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     Console.WriteLine($"Player {playerId} 로그인 수행");
     await client.LoginAsync(new LoginRequest { PlayerId = playerId });
 
-    // 위치 정보 주기적으로 전송
-    using var publishCall = client.Publish();
+    // 위치 정보 송수신을 동시에 처리
+    using var commsCall = client.Connect();
+
+    // 서버로부터 오는 메시지를 처리하는 읽기 Task
+    var readTask = Task.Run(async () =>
+    {
+        try
+        {
+            await foreach (var response in commsCall.ResponseStream.ReadAllAsync(cancellationToken))
+            {
+                if (response.MessageCase == ServerConnectionResponse.MessageOneofCase.WorldUpdate)
+                {
+                    // Dummy client에서는 수신 정보를 로그로만 남깁니다.
+                    var playerCount = response.WorldUpdate.PlayerPositionList.Count;
+                    if (playerCount > 0)
+                    {
+                        // Console.WriteLine($"Player {playerId} received update with {playerCount} players.");
+                    }
+                }
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+        {
+            Console.WriteLine($"Player {playerId} read stream cancelled.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Player {playerId} read error: {ex.Message}");
+        }
+    });
+
+    // 위치 정보를 주기적으로 전송하는 쓰기 로직
     try
     {
+        // 첫 위치 전송
+        await commsCall.RequestStream.WriteAsync(new ClientConnectionRequest { PositionUpdate = currentPosition });
+        
         while (!cancellationToken.IsCancellationRequested)
         {
             // 위치 업데이트
@@ -78,19 +111,26 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
                 currentPosition.Z = Math.Clamp(currentPosition.Z, MinZ, MaxZ);
             }
 
-            await publishCall.RequestStream.WriteAsync(new PublishRequest { PlayerPosition = currentPosition });
+            await commsCall.RequestStream.WriteAsync(new ClientConnectionRequest { PositionUpdate = currentPosition });
             await Task.Delay(100, cancellationToken);
         }
     }
+    catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+    {
+        Console.WriteLine($"Player {playerId} write stream cancelled.");
+    }
     catch (Exception ex)
     {
-        Console.WriteLine($"Player {playerId} publish error: {ex.Message}");
+        Console.WriteLine($"Player {playerId} write error: {ex.Message}");
     }
     finally
     {
-        await publishCall.RequestStream.CompleteAsync();
+        await commsCall.RequestStream.CompleteAsync();
+        Console.WriteLine($"Player {playerId} write stream finished.");
         
-        Console.WriteLine($"Player {playerId} publish stream finished.");
+        // 읽기 Task가 끝날 때까지 잠시 대기
+        await readTask;
+        
         try
         {
             await client.LogoutAsync(new LogoutRequest { PlayerId = playerId });

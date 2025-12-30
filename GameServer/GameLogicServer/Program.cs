@@ -71,6 +71,8 @@ await Host.CreateDefaultBuilder(args)
                     };
                 });
                 break;
+            case "Memory":
+                break;
             default:
                 throw new Exception($"Unknown grain directory provider: {grainDirectoryProvider}");
         }
