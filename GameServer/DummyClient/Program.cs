@@ -4,7 +4,7 @@ using GameProtocol;
 using Grpc.Core;
 using Grpc.Net.Client;
 
-var numClients = args.Length > 0 ? int.Parse(args[0]) : 10;
+var numClients = args.Length > 0 ? int.Parse(args[0]) : 100;
 Console.WriteLine($"{numClients}개의 더미 클라이언트를 생성하는 중");
 
 var tasks = new List<Task>();

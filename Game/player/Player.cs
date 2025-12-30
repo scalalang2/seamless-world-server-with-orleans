@@ -135,11 +135,14 @@ public partial class Player : CharacterBody3D
 				new Vector3((float)playerPos.X, (float)playerPos.Y, (float)playerPos.Z)
 			);
 			
-			(playerNode as Player)?.SetRemoteTargetTransform(newTransform);
 			if (isNewPlayer)
 			{
-				GetParent().AddChild(playerNode); 
+				// Set initial position before adding to the scene to prevent teleporting.
+				playerNode.GlobalTransform = newTransform;
+				GetParent().AddChild(playerNode);
 			}
+
+			(playerNode as Player)?.SetRemoteTargetTransform(newTransform);
 		}
 		
 		var playersToRemove = new List<string>();
