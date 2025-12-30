@@ -31,7 +31,7 @@ public static class QuadTreeHelper
                 if (position.Z < midZ) { quadrant = 1; minX = midX; maxZ = midZ; } // 우상단
                 else { quadrant = 3; minX = midX; minZ = midZ; } // 우하단
             }
-            sb.Append($"-{quadrant}");
+            sb.Append($"{quadrant}");
         }
 
         return sb.ToString();

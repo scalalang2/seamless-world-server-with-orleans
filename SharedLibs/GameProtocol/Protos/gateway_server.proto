@@ -55,4 +55,5 @@ message PlayerPosition {
   double pitch = 5;
   double yaw = 6;
   double roll = 7;
+  string fieldId = 8;
 }

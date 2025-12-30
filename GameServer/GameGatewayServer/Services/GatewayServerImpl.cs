@@ -3,6 +3,7 @@ using GameProtocol;
 using GameProtocol.Grains;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 using NATS.Client;
 
 namespace GameGatewayServer.Services;
@@ -100,14 +101,14 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
                 if (request.MessageCase != ClientConnectionRequest.MessageOneofCase.PositionUpdate) continue;
 
                 var position = request.PositionUpdate;
+                var newFieldId = QuadTreeHelper.GetNodeIdForPosition(position);
+                position.FieldId = newFieldId;
                 playerId = position.PlayerId;
 
                 if (string.IsNullOrEmpty(playerId)) continue;
                 
                 var playerGrain = _clusterClient.GetGrain<IPlayerGrain>(playerId);
                 await playerGrain.UpdatePosition(position);
-
-                var newFieldId = QuadTreeHelper.GetNodeIdForPosition(position);
 
                 if (currentFieldId != newFieldId)
                 {

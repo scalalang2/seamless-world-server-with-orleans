@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using GameClient.player;
 using GameProtocol;
+using GameProtocol.Grains;
 using Grpc.Core;
 using Grpc.Net.Client;
 
@@ -32,10 +33,18 @@ public partial class Player : CharacterBody3D
 	private GatewayServer.GatewayServerClient _grpcClient;
 	private CancellationTokenSource _cancellationTokenSource;
 	private AsyncDuplexStreamingCall<ClientConnectionRequest, ServerConnectionResponse> _commsCall;
-	private readonly Dictionary<string, Node3D> _otherPlayers = new();
+	private class RemotePlayer
+	{
+		public Node3D Node { get; set; }
+		public string FieldId { get; set; }
+	}
+	private readonly Dictionary<string, RemotePlayer> _otherPlayers = new();
 	private PackedScene _otherPlayerScene;
 	private double _timeSinceLastPublish = 0.0;
 	private const double PublishInterval = 0.1; // 100ms
+	
+	private string _currentFieldId;
+	private readonly HashSet<string> _aoiFieldIds = new();
 
 	public override void _Ready()
 	{
@@ -78,6 +87,8 @@ public partial class Player : CharacterBody3D
 					{
 						if (serverMsg.MessageCase == ServerConnectionResponse.MessageOneofCase.WorldUpdate)
 						{
+							var now = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+							// GD.Print($"[{now} | World Update], number of players {serverMsg.WorldUpdate.PlayerPositionList.Count}");
 							Callable.From(() => HandleSubscriptionUpdate(serverMsg.WorldUpdate)).CallDeferred();
 						}
 					}
@@ -114,19 +125,25 @@ public partial class Player : CharacterBody3D
 			receivedPlayerIds.Add(playerPos.PlayerId);
 
 			var isNewPlayer = false;
-			if (!_otherPlayers.TryGetValue(playerPos.PlayerId, out var playerNode))
+			Node3D playerNode;
+			if (!_otherPlayers.TryGetValue(playerPos.PlayerId, out var remotePlayer))
 			{
 				isNewPlayer = true;
 				
-	            // 새로운 원격 플레이어 객체를 생성한다.
-	            var newRemotePlayer = _otherPlayerScene.Instantiate<Player>();
-	            newRemotePlayer.Name = playerPos.PlayerId;
-	            newRemotePlayer.IsRemote = true;
-	                
-	            // 부모 노드의 자식으로 노드를 추가함
-	            _otherPlayers[playerPos.PlayerId] = newRemotePlayer;
-	            GD.Print($"[{_playerId}] Found new player: {playerPos.PlayerId}");
-	            playerNode = newRemotePlayer;			
+				// 새로운 원격 플레이어 객체를 생성한다.
+				var newRemotePlayer = _otherPlayerScene.Instantiate<Player>();
+				newRemotePlayer.Name = playerPos.PlayerId;
+				newRemotePlayer.IsRemote = true;
+					
+				// 부모 노드의 자식으로 노드를 추가함
+				_otherPlayers[playerPos.PlayerId] = new RemotePlayer { Node = newRemotePlayer, FieldId = playerPos.FieldId };
+				GD.Print($"[{_playerId}] Found new player: {playerPos.PlayerId}, fieldId: {playerPos.FieldId}");
+				playerNode = newRemotePlayer;
+			}
+			else
+			{
+				remotePlayer.FieldId = playerPos.FieldId;
+				playerNode = remotePlayer.Node;
 			}
 
 			// 위치 정보 업데이트
@@ -145,24 +162,7 @@ public partial class Player : CharacterBody3D
 			(playerNode as Player)?.SetRemoteTargetTransform(newTransform);
 		}
 		
-		var playersToRemove = new List<string>();
-		foreach (var existingPlayerId in _otherPlayers.Keys)
-		{
-			if (!receivedPlayerIds.Contains(existingPlayerId))
-			{
-				playersToRemove.Add(existingPlayerId);
-			}
-		}
 
-		// foreach (var oldPlayerId in playersToRemove)
-		// {
-		// 	if (_otherPlayers.TryGetValue(oldPlayerId, out var nodeToRemove))
-		// 	{
-		// 		nodeToRemove.QueueFree();
-		// 		_otherPlayers.Remove(oldPlayerId);
-		// 		GD.Print($"[{_playerId}] Removed stale player: {oldPlayerId}");
-		// 	}
-		// }
 	}
 
 	public override async void _ExitTree()
@@ -263,6 +263,45 @@ public partial class Player : CharacterBody3D
 		else
 		{
 			_sophiaSkin.Idle();
+		}
+
+		// AOI에서 벗어난 유저는 제거한다
+		if (!IsRemote)
+		{
+			var myPositionForField = new PlayerPosition
+			{
+				X = GlobalTransform.Origin.X, Y = GlobalTransform.Origin.Y, Z = GlobalTransform.Origin.Z
+			};
+			var newFieldId = QuadTreeHelper.GetNodeIdForPosition(myPositionForField);
+
+			if (_currentFieldId != newFieldId)
+			{
+				_currentFieldId = newFieldId;
+				_aoiFieldIds.Clear();
+				foreach (var id in QuadTreeHelper.GetNeighborIds(newFieldId, 1))
+				{
+					_aoiFieldIds.Add(id);
+				}
+
+				var playersToRemove = new List<string>();
+				foreach (var (playerId, remotePlayer) in _otherPlayers)
+				{
+					if (!_aoiFieldIds.Contains(remotePlayer.FieldId))
+					{
+						playersToRemove.Add(playerId);
+					}
+				}
+
+				foreach (var playerIdToRemove in playersToRemove)
+				{
+					if (_otherPlayers.TryGetValue(playerIdToRemove, out var remotePlayerToRemove))
+					{
+						remotePlayerToRemove.Node.QueueFree();
+						_otherPlayers.Remove(playerIdToRemove);
+						GD.Print($"[{_playerId}|{remotePlayerToRemove.FieldId}] Removed player {playerIdToRemove} who is out of AOI. fieldId: {_currentFieldId}");
+					}
+				}
+			}
 		}
 
 		// publishing my position

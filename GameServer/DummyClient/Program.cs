@@ -4,7 +4,7 @@ using GameProtocol;
 using Grpc.Core;
 using Grpc.Net.Client;
 
-var numClients = args.Length > 0 ? int.Parse(args[0]) : 100;
+var numClients = args.Length > 0 ? int.Parse(args[0]) : 300;
 Console.WriteLine($"{numClients}개의 더미 클라이언트를 생성하는 중");
 
 var tasks = new List<Task>();
@@ -62,6 +62,29 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     // 위치 정보 송수신을 동시에 처리
     using var commsCall = client.Connect();
 
+    // 서버로부터 오는 메시지를 처리하는 읽기 Task
+    var readTask = Task.Run(async () =>
+    {
+        try
+        {
+            await foreach (var response in commsCall.ResponseStream.ReadAllAsync(cancellationToken))
+            {
+                if (response.MessageCase == ServerConnectionResponse.MessageOneofCase.WorldUpdate)
+                {
+                    // nothing
+                }
+            }
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.Cancelled)
+        {
+            Console.WriteLine($"Player {playerId} read stream cancelled.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Player {playerId} read error: {ex.Message}");
+        }
+    });
+
     // 위치 정보를 주기적으로 전송하는 쓰기 로직
     try
     {
@@ -110,6 +133,9 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     {
         await commsCall.RequestStream.CompleteAsync();
         Console.WriteLine($"Player {playerId} write stream finished.");
+        
+        // 읽기 Task가 끝날 때까지 잠시 대기
+        await readTask;
         
         try
         {
