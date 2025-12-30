@@ -52,24 +52,17 @@ public static class QuadTreeHelper
         var width = bounds.maxX - bounds.minX;
         var height = bounds.maxZ - bounds.minZ;
 
-        // 8방향 + 중앙 지점
-        var testPoints = new List<PlayerPosition>
-        {
-            new() { X = bounds.midX, Z = bounds.midZ }, // 중앙
-            new() { X = bounds.midX, Z = bounds.midZ - height }, // 위
-            new() { X = bounds.midX, Z = bounds.midZ + height }, // 아래
-            new() { X = bounds.midX - width, Z = bounds.midZ }, // 왼쪽
-            new() { X = bounds.midX + width, Z = bounds.midZ }, // 오른쪽
-            new() { X = bounds.midX - width, Z = bounds.midZ - height }, // Up-Left
-            new() { X = bounds.midX + width, Z = bounds.midZ - height }, // Up-Right
-            new() { X = bounds.midX - width, Z = bounds.midZ + height }, // Down-Left
-            new() { X = bounds.midX + width, Z = bounds.midZ + height }  // Down-Right
-        };
-
         var neighborIds = new HashSet<string>();
-        foreach (var point in testPoints)
+
+        for (int xOffset = -aoiLevel; xOffset <= aoiLevel; xOffset++)
         {
-            neighborIds.Add(GetNodeIdForPosition(point));
+            for (int zOffset = -aoiLevel; zOffset <= aoiLevel; zOffset++)
+            {
+                var testX = bounds.midX + xOffset * width;
+                var testZ = bounds.midZ + zOffset * height;
+                
+                neighborIds.Add(GetNodeIdForPosition(new PlayerPosition { X = testX, Y = 0, Z = testZ }));
+            }
         }
 
         return neighborIds.ToList();

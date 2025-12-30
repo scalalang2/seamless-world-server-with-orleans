@@ -72,18 +72,18 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
         });
 
         // NATS 구독을 갱신하는 함수
-        async Task UpdateNatsSubscriptions(string newFieldId, CancellationToken cancellationToken)
+        async Task UpdateNatsSubscriptions(string newFieldId, string oldFieldId, CancellationToken cancellationToken)
         {
             await subscriptionLock.WaitAsync(cancellationToken);
             try
             {
                 if (cancellationToken.IsCancellationRequested) return;
 
-                if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} updating subscriptions from {OldFieldId} to {NewFieldId}", playerId, currentFieldId ?? "None", newFieldId);
+                if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} updating subscriptions from {OldFieldId} to {NewFieldId}", playerId, oldFieldId ?? "None", newFieldId);
 
-                var oldTopicIds = string.IsNullOrEmpty(currentFieldId)
+                var oldTopicIds = string.IsNullOrEmpty(oldFieldId)
                     ? new HashSet<string>()
-                    : QuadTreeHelper.GetNeighborIds(currentFieldId, aoiLevel).Select(id => $"world.{id}.updates").ToHashSet();
+                    : QuadTreeHelper.GetNeighborIds(oldFieldId, aoiLevel).Select(id => $"world.{id}.updates").ToHashSet();
                 
                 var newTopicIds = QuadTreeHelper.GetNeighborIds(newFieldId, aoiLevel)
                     .Select(id => $"world.{id}.updates")
@@ -136,8 +136,6 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
                         natsSubscriptions[topic] = sub;
                     }
                 }
-                
-                currentFieldId = newFieldId;
             }
             finally
             {
@@ -165,18 +163,23 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
 
                 if (currentFieldId != newFieldId)
                 {
-                    if (!string.IsNullOrEmpty(currentFieldId))
+                    var oldFieldId = currentFieldId;
+                    currentFieldId = newFieldId; // 즉시 업데이트하여 레이스 컨디션 방지
+
+                    // 이전 구역에 Leave 메시지 전송
+                    if (!string.IsNullOrEmpty(oldFieldId))
                     {
-                        var oldWorldGrain = _clusterClient.GetGrain<IWorldGrain>(currentFieldId);
+                        var oldWorldGrain = _clusterClient.GetGrain<IWorldGrain>(oldFieldId);
                         await oldWorldGrain.Leave(playerId);
                     }
 
+                    // 새 구역에 Enter 메시지 전송
                     var newWorldGrain = _clusterClient.GetGrain<IWorldGrain>(newFieldId);
                     await newWorldGrain.Enter(position);
                     
-                    if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} moved from {OldFieldId} to {NewFieldId}", playerId, currentFieldId ?? "None", newFieldId);
-
-                    _ = Task.Run(() => UpdateNatsSubscriptions(newFieldId, context.CancellationToken), context.CancellationToken);
+                    if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} moved from {OldFieldId} to {NewFieldId}", playerId, oldFieldId ?? "None", newFieldId);
+                    
+                    _ = Task.Run(() => UpdateNatsSubscriptions(newFieldId, oldFieldId, context.CancellationToken), context.CancellationToken);
                 }
                 else
                 {
