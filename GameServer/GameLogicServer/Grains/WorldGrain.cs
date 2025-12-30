@@ -54,11 +54,19 @@ public class WorldGrain : Grain, IWorldGrain
 
         var response = new SubscribeResponse();
         response.PlayerPositionList.AddRange(_players.Values);
-        
+        var worldEvent = new WorldEvent { Positions = response };
         var topic = $"world.{this.GetPrimaryKeyString()}.updates";
-        var data = response.ToByteArray();
-        
-        _natsConnection.Publish(topic, data);
+        var data = worldEvent.ToByteArray();
+
+        try
+        {
+            _natsConnection.Publish(topic, data);            
+        }
+        catch (Exception e)
+        {
+            this._logger.LogError(e, "failed to publish world Event");
+            throw new Exception($"failed to publish world event {e.Message}");
+        }
         
         return Task.CompletedTask;
     }
@@ -72,8 +80,27 @@ public class WorldGrain : Grain, IWorldGrain
 
     public Task Leave(string playerId)
     {
-        _players.Remove(playerId);
-        _logger.LogInformation($"Player {playerId} left grain {this.GetPrimaryKeyString()}");
+        if (_players.Remove(playerId))
+        {
+            _logger.LogInformation($"Player {playerId} left grain {this.GetPrimaryKeyString()}");
+
+            var playerLeft = new PlayerLeft { PlayerId = playerId };
+            var worldEvent = new WorldEvent { PlayerLeft = playerLeft };
+            
+            var topic = $"world.{this.GetPrimaryKeyString()}.updates";
+            var data = worldEvent.ToByteArray();
+
+            try
+            {
+                _natsConnection.Publish(topic, data);
+            }
+            catch (Exception e)
+            {
+                this._logger.LogError(e, "failed to publish world Event");
+                throw new Exception($"failed to publish world event {e.Message}");
+            }
+        }
+        
         return Task.CompletedTask;
     }
 

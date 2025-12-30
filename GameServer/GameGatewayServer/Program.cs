@@ -24,13 +24,9 @@ builder.Host.UseOrleansClient(clientBuilder =>
         .Services.AddSerializer(builder => builder.AddProtobufSerializer());
 });
 
-builder.Services.AddSingleton<IConnection>(sp =>
-{
-    var factory = new ConnectionFactory();
-    var connection = factory.CreateConnection("nats://localhost:4222"); 
-    return connection;
-});
-
+var factory = new ConnectionFactory();
+var connection = factory.CreateConnection("nats://localhost:4222");
+builder.Services.AddSingleton<IConnection>(connection);
 builder.Services.AddGrpc();
 
 var app = builder.Build();

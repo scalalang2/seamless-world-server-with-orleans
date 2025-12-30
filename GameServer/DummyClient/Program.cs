@@ -67,7 +67,7 @@ static async Task RunClientAsync(string playerId, CancellationToken cancellation
     {
         try
         {
-            await foreach (var response in commsCall.ResponseStream.ReadAllAsync(cancellationToken))
+            await foreach (var response in commsCall.ResponseStream.ReadAllAsync())
             {
                 if (response.MessageCase == ServerConnectionResponse.MessageOneofCase.WorldUpdate)
                 {

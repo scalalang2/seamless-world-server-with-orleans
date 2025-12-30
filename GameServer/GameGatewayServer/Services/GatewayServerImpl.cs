@@ -3,7 +3,6 @@ using GameProtocol;
 using GameProtocol.Grains;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
 using NATS.Client;
 
 namespace GameGatewayServer.Services;
@@ -37,7 +36,7 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
     {
         string playerId = string.Empty;
         string? currentFieldId = null;
-        var natsSubscriptions = new List<IAsyncSubscription>();
+        var natsSubscriptions = new Dictionary<string, IAsyncSubscription>();
         var subscriptionLock = new SemaphoreSlim(1, 1);
         const int aoiLevel = 1;
 
@@ -48,11 +47,24 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
             {
                 try
                 {
-                    var response = SubscribeResponse.Parser.ParseFrom(args.Message.Data);
-                    if (response.PlayerPositionList.Any(p => p.PlayerId != playerId))
+                    var worldEvent = WorldEvent.Parser.ParseFrom(args.Message.Data);
+                    switch (worldEvent.EventCase)
                     {
-                        var message = new ServerConnectionResponse { WorldUpdate = response };
-                        await responseStream.WriteAsync(message);
+                        case WorldEvent.EventOneofCase.Positions:
+                            if (worldEvent.Positions.PlayerPositionList.Any(p => p.PlayerId != playerId))
+                            {
+                                var positionMessage = new ServerConnectionResponse { WorldUpdate = worldEvent.Positions };
+                                await responseStream.WriteAsync(positionMessage);
+                            }
+                            break;
+                        
+                        case WorldEvent.EventOneofCase.PlayerLeft:
+                            if (worldEvent.PlayerLeft.PlayerId != playerId)
+                            {
+                                var leftMessage = new ServerConnectionResponse { PlayerLeft = worldEvent.PlayerLeft };
+                                await responseStream.WriteAsync(leftMessage);
+                            }
+                            break;
                     }
                 }
                 catch (Exception ex)
@@ -67,24 +79,55 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
                 await subscriptionLock.WaitAsync(context.CancellationToken);
                 try
                 {
-                    _logger.LogInformation("Player {PlayerId} is updating subscriptions from {OldFieldId} to {NewFieldId}", playerId, currentFieldId ?? "None", newFieldId);
-                    
-                    // 기존 구독 해지
-                    foreach (var sub in natsSubscriptions)
-                    {
-                        sub.Unsubscribe();
-                        sub.Dispose();
-                    }
-                    natsSubscriptions.Clear();
+                    if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} updating subscriptions from {OldFieldId} to {NewFieldId}", playerId, currentFieldId ?? "None", newFieldId);
 
-                    // 새 구독 시작
-                    var topicIds = QuadTreeHelper.GetNeighborIds(newFieldId, aoiLevel);
-                    _logger.LogInformation("Player {PlayerId} subscribing to {TopicCount} topics for new field {NewFieldId}.", playerId, topicIds.Count, newFieldId);
-                    foreach (var topicId in topicIds)
+                    var oldTopicIds = string.IsNullOrEmpty(currentFieldId)
+                        ? new HashSet<string>()
+                        : QuadTreeHelper.GetNeighborIds(currentFieldId, aoiLevel).Select(id => $"world.{id}.updates").ToHashSet();
+                    
+                    var newTopicIds = QuadTreeHelper.GetNeighborIds(newFieldId, aoiLevel)
+                        .Select(id => $"world.{id}.updates")
+                        .ToHashSet();
+
+                    var topicsToUnsubscribe = oldTopicIds.Except(newTopicIds).ToList();
+                    var topicsToSubscribe = newTopicIds.Except(oldTopicIds).ToList();
+
+                    if (topicsToUnsubscribe.Any())
                     {
-                        var topic = $"world.{topicId}.updates";
-                        var sub = _natsConnection.SubscribeAsync(topic, natsHandler);
-                        natsSubscriptions.Add(sub);
+                        if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} unsubscribing from {TopicCount} topics.", playerId, topicsToUnsubscribe.Count);
+                        foreach (var topic in topicsToUnsubscribe)
+                        {
+                            if (natsSubscriptions.TryGetValue(topic, out var sub))
+                            {
+                                sub.Unsubscribe();
+                                sub.Dispose();
+                                natsSubscriptions.Remove(topic);
+
+                                // 토픽에서 필드 ID 추출 (e.g., "world.01.updates" -> "0-1")
+                                var fieldId = topic.Replace("world.", "").Replace(".updates", "");
+                                var worldGrain = _clusterClient.GetGrain<IWorldGrain>(fieldId);
+                                var playersInLeavingField = await worldGrain.GetPlayers();
+
+                                foreach (var p in playersInLeavingField)
+                                {
+                                    if (p.PlayerId != playerId)
+                                    {
+                                        var leftMessage = new ServerConnectionResponse { PlayerLeft = new PlayerLeft { PlayerId = p.PlayerId } };
+                                        await responseStream.WriteAsync(leftMessage);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (topicsToSubscribe.Any())
+                    {
+                        if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} subscribing to {TopicCount} new topics.", playerId, topicsToSubscribe.Count);
+                        foreach (var topic in topicsToSubscribe)
+                        {
+                            var sub = _natsConnection.SubscribeAsync(topic, natsHandler);
+                            natsSubscriptions[topic] = sub;
+                        }
                     }
                     
                     currentFieldId = newFieldId;
@@ -101,14 +144,15 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
                 if (request.MessageCase != ClientConnectionRequest.MessageOneofCase.PositionUpdate) continue;
 
                 var position = request.PositionUpdate;
-                var newFieldId = QuadTreeHelper.GetNodeIdForPosition(position);
-                position.FieldId = newFieldId;
                 playerId = position.PlayerId;
 
                 if (string.IsNullOrEmpty(playerId)) continue;
                 
                 var playerGrain = _clusterClient.GetGrain<IPlayerGrain>(playerId);
                 await playerGrain.UpdatePosition(position);
+                
+                var newFieldId = QuadTreeHelper.GetNodeIdForPosition(position);
+                position.FieldId = newFieldId;
 
                 if (currentFieldId != newFieldId)
                 {
@@ -123,7 +167,7 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
                     var newWorldGrain = _clusterClient.GetGrain<IWorldGrain>(newFieldId);
                     await newWorldGrain.Enter(position);
                     
-                    _logger.LogInformation("Player {PlayerId} moved from {OldFieldId} to {NewFieldId}", playerId, currentFieldId ?? "None", newFieldId);
+                    if(!playerId.StartsWith("dummy-client")) _logger.LogInformation("Player {PlayerId} moved from {OldFieldId} to {NewFieldId}", playerId, currentFieldId ?? "None", newFieldId);
 
                     // NATS 구독 갱신
                     await UpdateNatsSubscriptions(newFieldId);
@@ -152,13 +196,13 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
             await subscriptionLock.WaitAsync();
             try
             {
-                foreach (var sub in natsSubscriptions)
+                _logger.LogInformation("Player {PlayerId} unsubscribing from all {TopicCount} topics.", playerId, natsSubscriptions.Count);
+                foreach (var sub in natsSubscriptions.Values)
                 {
                     sub.Unsubscribe();
                     sub.Dispose();
                 }
                 natsSubscriptions.Clear();
-                _logger.LogInformation("Player {PlayerId} unsubscribed from all topics.", playerId);
             }
             finally
             {
@@ -176,5 +220,3 @@ public class GatewayServerImpl : GatewayServer.GatewayServerBase
 
 
 }
-
-    

@@ -37,9 +37,21 @@ message ClientConnectionRequest {
   }
 }
 
+message PlayerLeft {
+  string playerId = 1;
+}
+
+message WorldEvent {
+  oneof event {
+    SubscribeResponse positions = 1;
+    PlayerLeft player_left = 2;
+  }
+}
+
 message ServerConnectionResponse {
   oneof message {
     SubscribeResponse world_update = 1;
+    PlayerLeft player_left = 2;
   }
 }
 

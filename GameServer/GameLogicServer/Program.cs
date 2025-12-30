@@ -84,14 +84,10 @@ await Host.CreateDefaultBuilder(args)
     .ConfigureServices(services =>
     {
         // NATS 커넥션 세팅
-        services.AddSingleton<IConnection>(sp =>
-        {
-            var factory = new ConnectionFactory();
-            
-            // TODO: Configuration으로 이동
-            var connection = factory.CreateConnection("nats://localhost:4222"); 
-            return connection;
-        });
+        var factory = new ConnectionFactory();
+        var connection = factory.CreateConnection("nats://localhost:4222");
+        
+        services.AddSingleton<IConnection>(connection);
     })
     .ConfigureLogging(logging =>
     {
