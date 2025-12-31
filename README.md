@@ -1,7 +1,7 @@
 ## About
 A Demonstration of a Seamless World MMORPG Server using .NET Orleans
 
-[![Uploading 스크린샷 2025-12-31 오후 11.47.02.png…]()](https://vimeo.com/1150551992?fl=pl&fe=sh)
+<a href="https://vimeo.com/1150551992" target="_blank"><img width="723" height="457" alt="스크린샷 2025-12-31 오후 11 47 02" src="https://github.com/user-attachments/assets/0b6570d4-0b02-407c-b575-0d9ead7e29da" /></a>
 
 
 ## Installation
